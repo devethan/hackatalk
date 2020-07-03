@@ -20,10 +20,17 @@ import { dark, light } from './theme';
 
 import { ActionSheetProvider } from '@expo/react-native-action-sheet';
 import AsyncStorage from '@react-native-community/async-storage';
-import { LoadingIndicator } from 'dooboo-ui';
+import ErrorBoundary from './components/screen/ErrorBoundary';
+// import { LoadingIndicator } from 'dooboo-ui';
 import RootNavigator from './components/navigation/RootStackNavigator';
 import { User } from 'types/graphql';
 import { initializeEThree } from './utils/virgil';
+import styled from 'styled-components/native';
+
+const View = styled.View`
+  flex: 1;
+`;
+const Text = styled.Text``;
 
 const meQuery = graphql`
   query AppUserQuery {
@@ -91,9 +98,17 @@ const RelayProviderWrapper: FC = ({ children }) => {
   } = useAuthContext();
   return (
     <RelayEnvironmentProvider environment={relay}>
-      <Suspense fallback={<LoadingIndicator />}>
-        <ActionSheetProvider>{children}</ActionSheetProvider>
-      </Suspense>
+      <ErrorBoundary
+        fallback={
+          <View>
+            <Text>Error!</Text>
+          </View>
+        }
+      >
+        <Suspense fallback={<Text>Loading...</Text>}>
+          <ActionSheetProvider>{children}</ActionSheetProvider>
+        </Suspense>
+      </ErrorBoundary>
     </RelayEnvironmentProvider>
   );
 };
