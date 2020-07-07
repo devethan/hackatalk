@@ -1,18 +1,26 @@
 import { Alert, Image, TouchableOpacity, View } from 'react-native';
 import { Button, EditText } from 'dooboo-ui';
 import { IC_CAMERA, IC_PROFILE } from '../../utils/Icons';
+import type {
+  ProfileUpdateMeQuery,
+  ProfileUpdateMeQueryResponse,
+} from '../../__generated__/ProfileUpdateMeQuery.graphql';
 import React, { FC, useEffect, useState } from 'react';
 import {
   fetchQuery,
   graphql,
+  preloadQuery,
+  usePreloadedQuery,
 } from 'react-relay/hooks';
-import { launchCameraAsync, launchImageLibraryAsync } from '../../utils/ImagePicker';
+import {
+  launchCameraAsync,
+  launchImageLibraryAsync,
+} from '../../utils/ImagePicker';
 
 import AsyncStorage from '@react-native-community/async-storage';
 import Config from 'react-native-config';
 import { EditTextInputType } from 'dooboo-ui/EditText';
 import { MainStackNavigationProps } from '../navigation/MainStackNavigator';
-import type { ProfileUpdateMeQuery } from '../../__generated__/ProfileUpdateMeQuery.graphql';
 import { encryptMessage } from '../../utils/virgil';
 import environment from '../../relay';
 import { getString } from '../../../STRINGS';
@@ -84,25 +92,35 @@ const meQuery = graphql`
   }
 `;
 
+const preloadResult = preloadQuery<ProfileUpdateMeQuery>(
+  environment,
+  meQuery,
+  {},
+);
+
 const Screen: FC<Props> = () => {
+  console.log('+_+_+_+_+_+_+preloadResult_+_+_+_+_+_+_', preloadResult);
   const { theme } = useThemeContext();
-  const [name, setName] = useState('');
-  const [nickname, setNickname] = useState('');
-  const [statusMessage, setstatusMessage] = useState('');
+  const data: ProfileUpdateMeQueryResponse = usePreloadedQuery<
+    ProfileUpdateMeQuery
+  >(meQuery, preloadResult);
+  const [name, setName] = useState(data.me.name);
+  const [nickname, setNickname] = useState(data.me.nickname);
+  const [statusMessage, setstatusMessage] = useState(data.me.statusMessage);
   const { showActionSheetWithOptions } = useActionSheet();
   const [profilePath, setProfilePath] = useState('');
 
   useEffect(() => {
-    fetchQuery<ProfileUpdateMeQuery>(environment, meQuery, {}).subscribe({
-      next: (data) => {
-        if (data.me) {
-          const { name, nickname, statusMessage } = data.me;
-          setName(name ?? '');
-          setNickname(nickname ?? '');
-          setstatusMessage(statusMessage ?? '');
-        }
-      },
-    });
+    // fetchQuery<ProfileUpdateMeQuery>(environment, meQuery, {}).subscribe({
+    //   next: (data) => {
+    //     if (data.me) {
+    //       const { name, nickname, statusMessage } = data.me;
+    //       setName(name ?? '');
+    //       setNickname(nickname ?? '');
+    //       setstatusMessage(statusMessage ?? '');
+    //     }
+    //   },
+    // });
   }, []);
 
   const changeText = (type: string, text: string): void => {
@@ -211,23 +229,29 @@ const Screen: FC<Props> = () => {
             activeOpacity={0.5}
             onPress={pressProfileImage}
           >
-            {!profilePath
-              ? <View style={{
-                width: 90,
-                height: 90,
-              }}>
+            {!profilePath ? (
+              <View
+                style={{
+                  width: 90,
+                  height: 90,
+                }}
+              >
                 <Image width={80} height={80} source={IC_PROFILE} />
-                <Image style={{
-                  position: 'absolute',
-                  bottom: 0,
-                  right: 0,
-                }} source={IC_CAMERA}/>
+                <Image
+                  style={{
+                    position: 'absolute',
+                    bottom: 0,
+                    right: 0,
+                  }}
+                  source={IC_CAMERA}
+                />
               </View>
-              : <ProfileImage
+            ) : (
+              <ProfileImage
                 testID="profile-image"
                 source={{ uri: profilePath }}
               />
-            }
+            )}
           </TouchableOpacity>
           <EditText
             testID="input-nickname"
@@ -240,9 +264,7 @@ const Screen: FC<Props> = () => {
             borderColor={theme.font}
             focusColor={theme.focused}
             placeholderTextColor={theme.placeholder}
-            onChangeText={(text: string): void =>
-              changeText('NICKNAME', text)
-            }
+            onChangeText={(text: string): void => changeText('NICKNAME', text)}
           />
           <EditText
             testID="input-name"
@@ -255,9 +277,7 @@ const Screen: FC<Props> = () => {
             borderColor={theme.font}
             focusColor={theme.focused}
             placeholderTextColor={theme.placeholder}
-            onChangeText={(text: string): void =>
-              changeText('NAME', text)
-            }
+            onChangeText={(text: string): void => changeText('NAME', text)}
           />
           <EditText
             type={EditTextInputType.DEFAULT}
